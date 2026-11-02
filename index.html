@@ -27,7 +27,7 @@
         <p class="text-xs text-gray-400">Usher & Event Deck Manager</p>
       </div>
     </div>
-    <div id="header-actions" class="flex gap-2"></div>
+    <div id="header-actions" class="flex items-center gap-2"></div>
   </header>
 
   <!-- Main Content Container -->
@@ -134,6 +134,17 @@
       const headerActions = document.getElementById('header-actions');
       headerActions.innerHTML = '';
 
+      // Global Export/Import buttons in Header
+      headerActions.innerHTML = `
+        <button onclick="exportData()" class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-300 border border-gray-700 flex items-center gap-1">
+          <i class="fa-solid fa-download"></i> Export Data
+        </button>
+        <label class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-300 border border-gray-700 cursor-pointer flex items-center gap-1">
+          <i class="fa-solid fa-upload"></i> Import Data
+          <input type="file" accept=".json" onchange="importData(event)" class="hidden"/>
+        </label>
+      `;
+
       if (viewMode === 'list') {
         renderProjectList(app);
       } else if (viewMode === 'detail') {
@@ -141,6 +152,41 @@
       } else if (viewMode === 'client') {
         renderClientView(app, headerActions);
       }
+    }
+
+    // --- Data Transfer (Backup / Restore) ---
+    async function exportData() {
+      const allProjects = await getAllProjects();
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allProjects));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `1eventapp_backup_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importData(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const importedProjects = JSON.parse(event.target.result);
+          if (Array.isArray(importedProjects)) {
+            for (let proj of importedProjects) {
+              await saveProject(proj);
+            }
+            projects = await getAllProjects();
+            render();
+            alert('Data imported successfully!');
+          }
+        } catch (err) {
+          alert('Invalid backup file format!');
+        }
+      };
+      reader.readAsText(file);
     }
 
     // --- 1. Projects Dashboard ---
@@ -164,7 +210,7 @@
               <i class="fa-solid fa-folder-open"></i>
             </div>
             <h3 class="text-lg font-bold mb-1">No Event Folders Yet</h3>
-            <p class="text-gray-400 text-sm mb-6">Create a new folder to start adding Ushers, Multiple Photos, and Voice Notes.</p>
+            <p class="text-gray-400 text-sm mb-6">Create a new folder or click <b>Import Data</b> to restore your folder from laptop.</p>
             <button onclick="createNewProject()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold">
               + Create First Event
             </button>
@@ -237,9 +283,9 @@
       const proj = projects.find(p => p.id === currentProjectId);
       if (!proj) return goHome();
 
-      headerActions.innerHTML = `
-        <button onclick="viewMode='client'; render();" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold flex items-center gap-2 shadow-lg shadow-emerald-600/20">
-          <i class="fa-solid fa-paper-plane"></i> Launch Client Mode
+      headerActions.innerHTML += `
+        <button onclick="viewMode='client'; render();" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold flex items-center gap-1 text-white shadow-lg shadow-emerald-600/20">
+          <i class="fa-solid fa-paper-plane"></i> Client Mode
         </button>
       `;
 
@@ -499,9 +545,9 @@
       const proj = projects.find(p => p.id === currentProjectId);
       if (!proj) return goHome();
 
-      headerActions.innerHTML = `
-        <button onclick="viewMode='detail'; render();" class="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm font-semibold flex items-center gap-2 border border-gray-700">
-          <i class="fa-solid fa-pen-to-square"></i> Back to Builder Mode
+      headerActions.innerHTML += `
+        <button onclick="viewMode='detail'; render();" class="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs font-semibold flex items-center gap-1 border border-gray-700">
+          <i class="fa-solid fa-pen-to-square"></i> Builder Mode
         </button>
       `;
 
